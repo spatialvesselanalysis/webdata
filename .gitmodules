@@ -1,0 +1,4 @@
+[submodule "svasite/public"]
+	path = svasite/public
+	url = https://github.com/spatialvesselanalysis/spatialvesselanalysis.github.io.git
+	branch = main

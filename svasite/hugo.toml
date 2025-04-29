@@ -1,0 +1,4 @@
+baseURL = 'https://spatialvesselanalysis.github.io/'
+languageCode = 'en-us'
+title = 'Spatial Vessel Analysis'
+theme = 'hugo-book'
