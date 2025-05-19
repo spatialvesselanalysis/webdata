@@ -37,7 +37,7 @@ The following pipeline offers a robust, reproducible, and scalable solution for 
 So, you've some histological images and a good dose of scientific curiosity. Now what? Let's walk through the pipeline together, breaking it down step by step.
 
 ### 1. **Prepare Your Data**
-Before diving into analysis, we need to prepare your images. Here’s what you need to get your data ready for processing:
+Before diving into analysis, you need to prepare your images. Here’s what you need to get your data ready for processing:
 
    - #### 1.1 Stain the histological images of interest for CD31
      The first step is to obtain the histological images of interest. These images must include a stain that highlights blood vessels. Common choices are CD31 or CD34, both of which label the endothelial cells lining the vasculature. CD31 is particularly useful due to its strong and specific endothelial staining, while CD34 provides additional coverage of endothelial and progenitor cells. These stains are essential for enhancing vessel contrast and enabling analyses further down the pipeline. Finally, the slides need to be scanned digitally for further evaluation.
@@ -331,7 +331,7 @@ Let's now explore a path illuminated by our newfound understanding of vascular n
       #r
       GP_N <- ulam(model_list, data = dat_list, chains = 4, cores = num_cores, iter = 600, warmup = 150)
       ```
-      Finnally, print the model summary.
+      Finally, print the model summary.
       ```r
       #r
       print(precis(GP_N))
