@@ -2,6 +2,3 @@
 	path = svasite/public
 	url = https://github.com/spatialvesselanalysis/spatialvesselanalysis.github.io.git
 	branch = main
-[submodule "themes/hugo-book"]
-	path = themes/hugo-book
-	url = https://github.com/alex-shpak/hugo-book

@@ -5,7 +5,7 @@ layout = 'single'
 +++
 
 # Spatial Vessel Analysis 
- This is example test.
+
 ## Overview
 The following pipeline offers a robust, reproducible, and scalable solution for extracting vessel-related features from histological images. Accurate vascular network segmentation provides key insights into vascular conformation and remodeling. Additionally, this pipeline also correlates vascular structures with drug distribution. While particularly relevant in oncology for characterizing the tumor microenvironment, it may also be applied to other diseases where vascular alterations are of paramount importance, including those involving inflammation, fibrosis, and microvascular dysfunction. By enhancing our understanding of vascular-mediated disease progression and treatment delivery, this approach supports both research and clinical decision-making.
 
@@ -24,12 +24,14 @@ The following pipeline offers a robust, reproducible, and scalable solution for 
    - 2.2 Application of Otsu’s thresholding
    - 2.3 Morphological operations
    - 2.4 Feature extraction
-3. **Infer drug distribution**
-   - 3.1 Generation of synthetic vessel masks
-   - 3.2 Definition of a known drug distribution function
-   - 3.3 Application of GP modelling on simulator
-   - 3.4 Assesment of model accuracy
-4. **Interpret Your Data**
+3. **Statistical analyses**:
+   - 3.1 Normalization
+4. **Infer drug distribution**
+   - 4.1 Generation of synthetic vessel masks
+   - 4.2 Definition of a known drug distribution function
+   - 4.3 Application of GP modelling on simulator
+   - 4.4 Assesment of model accuracy
+5. **Interpret Your Data**
 
 ---
 
@@ -46,7 +48,7 @@ Before diving into analysis, you need to prepare your images. Here’s what you 
      Once you have your images, it’s crucial that they are in the right format for compatibility with the analysis pipeline. The most commonly used image formats for this type of work are .tiff (higher quality, slower processing) and .jpg (lower quality, faster processing).
 
 ### 2. **Segment Vessels and Extract Features in Python**
-This is where the true transformation — or as some may say, magic — happens. With the images at hand, you can perform vessel segmentation and feature extraction using Python. Simply run the `Segmentation.py` script as follows.
+This is where the true transformation — or as some may say, magic — happens. With the images at hand, you can perform vessel segmentation and feature extraction using Python. Simply run the `Segmentation.py` (script downloadable from the user slrenne's erivessel repository) script as follows.
 
 In the prelinimary setup, upload necessary libraries.
 ```python
@@ -137,9 +139,8 @@ for folder in folders:
       #python
       plt.imsave(f"{directory_to_save}{folder}_Segmented.png", opening, cmap="gray")
       ```
-     Example output: a binary image, created using a mask, where all vessels are represented in white and the background is shown in black.
-   
-     <img src="output/Segmented.png" alt="Binary image output after segmentation and morphological operations" width="300"/>
+      Example output: a binary image, created using a mask, where all vessels are represented in white and the background is shown in black.
+      <img src="/images/Segmented.png" alt="Image of segmented vessels" width="400">
      
       To enhance interpretability - because seeing is believing - contour detection outlines vessel boundaries as an overlay on the original images. Nothing beats a well-labeled, highlighted image that speaks for itself, showcasing exactly what you've extracted.
       ```python
@@ -152,9 +153,8 @@ for folder in folders:
        cv2.imwrite(f"{directory_to_save}{folder}_Vessels.jpg", original)
       ```
       Example output: the original histological image, with vessel countours highlighted in green.
-     
-      <img src="output/Contoured.jpg" alt="Histological image with vessel contours overlayed" width="300"/>
-       
+      <img src="/images/Contoured.jpg" alt="Image of contoured vessels" width="400">
+
    - #### 2.4 Feature extraction
      Great, you now have segmented vessels, but science demands numbers, not just pretty pictures. To obtain more information on vessel morphology, quantitative features are extracted using `regionprops_table` from `skimage.measure`. These properties include:
       - `area`: The number of pixels inside each segmented vessel.
@@ -175,13 +175,179 @@ for folder in folders:
      ```
       The output is a CSV file `{folder}_Measurements.csv` containing quantitative measurements of each detected vessel in the segmented image. The columns of the CSV file represent different morphological properties of the vessels, and each row corresponds to one labeled vessel.
 
-### 3. **Infer Drug Distributions**
+### 3. **Statistical Analyses**
+Now that you have quantitative data on your vessels, you can perform statistics to investigate what those numbers mean.
+
+   - #### 3.1 Normalization
+      Before you can apply statistical analyses, it is necessary to normalize your data. The code `Area_slide.py` (script downloadable from the user slrenne's erivessel repository) allows you to normalize the number of vessels on the tissue sample area. The function of this code is to segment the entire sample area through the L channel, also known as the luminance channel.
+
+      To begin, set up the environment.
+      ```python
+      #python
+      import cv2
+      import numpy as np
+      import matplotlib.pyplot as plt
+      import os
+      import glob
+      import pandas as pd
+      from tqdm import tqdm 
+      ```
+      The following function takes the path to an image as input and returns the area of tissue present, optionally saving visualizations of the results. The image is read using OpenCV, then converted from BGR to RGB to LAB (L = luminance, A = green/red, B = blue/yellow). Here, only the L channel is extracted to help separate tissue from the background based on brightness.
+      ```python
+      #python
+      def calculate_tissue_area(image_path, save_visualizations=False, output_folder=None):
+        
+        img = cv2.imread(image_path)
+        if img is None:
+          print(f"Error: Could not read image {image_path}")
+          return 0, None, None
+    
+        img_rgb = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
+        lab = cv2.cvtColor(img, cv2.COLOR_BGR2LAB)
+        l_channel = lab[:,:,0]
+      ```
+      You then apply a binary inverse threshold: pixels brighter than 220 (almost white) are set to 0 (black), while others are set to 255 (white). This isolates the darker tissue from the bright background. Next, you perform morhological operations and find the contours of white regions in the binary image, which should correspond to tissue.
+      ```python
+      #python
+        _, binary = cv2.threshold(l_channel, 220, 255, cv2.THRESH_BINARY_INV)
+    
+        kernel = np.ones((5,5), np.uint8)
+        binary = cv2.morphologyEx(binary, cv2.MORPH_CLOSE, kernel)
+        binary = cv2.morphologyEx(binary, cv2.MORPH_OPEN, kernel)
+    
+        contours, _ = cv2.findContours(binary, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+  
+        mask = np.zeros_like(l_channel)
+
+        min_contour_area = 1000  # Adjust based on your image size
+        for contour in contours:
+            if cv2.contourArea(contour) > min_contour_area:
+                cv2.drawContours(mask, [contour], 0, 255, -1)
+      ```
+      Here, you count how many white pixels are present, knowing that each pixel corresponds to 1 unit of tissue area. Additionally a mask is used to extract only the tissue from the RGB image by making pixels outside the tissue black.
+      ```python
+      #python
+        area_pixels = cv2.countNonZero(mask)
+        filled_tissue = cv2.bitwise_and(img_rgb, img_rgb, mask=mask)
+      ```
+      If enabled, the `save_visualizations` function generates a 2x2 subplot with: the original image, the binary threshold result, the tissue mask and the overlayed image with area shown in the title. The plots are then saved in the specified `output_folder` with `_analysis.png` suffix.
+      ```python
+        if save_visualizations:
+            if output_folder is None:
+                output_folder = os.path.dirname(image_path) or '.'
+        
+            plt.figure(figsize=(15, 10))
+            
+            plt.subplot(2, 2, 1)
+            plt.imshow(img_rgb)
+            plt.title('Original Image')
+            plt.axis('off')
+            
+            plt.subplot(2, 2, 2)
+            plt.imshow(binary, cmap='gray')
+            plt.title('Thresholded Image')
+            plt.axis('off')
+            
+            plt.subplot(2, 2, 3)
+            plt.imshow(mask, cmap='gray')
+            plt.title('Tissue Mask')
+            plt.axis('off')
+            
+            plt.subplot(2, 2, 4)
+            plt.imshow(filled_tissue)
+            plt.title(f'Filled Tissue (Area: {area_pixels} pixels)')
+            plt.axis('off')
+            
+            plt.tight_layout()
+        
+            base_name = os.path.splitext(os.path.basename(image_path))[0]
+            plt.savefig(f"{output_folder}/{base_name}_analysis.png", dpi=300)
+            plt.close()
+      ```
+      At the end the `calculate_tissue_area` function returns the tissue area in pixels, the binary mask, and the RGB image with tissue highlighted.
+      ```python   
+        return area_pixels, mask, filled_tissue
+      ```
+      Example output: a binary image showing the background in white and the total tissue area in white.
+      <img src="/images/Area.png" alt="Binary image showing tissue as white and background as black" width="400">
+
+      The next function, `process_folder`, processes all image files in a given folder and applies the `calculate_tissue_area` function to each of them. The results are saved to a CSV file.
+      ```python
+      def process_folder(input_folder, output_folder, file_extensions=None):
+        if file_extensions is None:
+            file_extensions = ['.jpg', '.jpeg', '.png', '.tif', '.tiff']
+      
+        os.makedirs(output_folder, exist_ok=True)
+        
+        image_files = []
+        for ext in file_extensions:
+            image_files.extend(glob.glob(os.path.join(input_folder, f'*{ext}')))
+            image_files.extend(glob.glob(os.path.join(input_folder, f'*{ext.upper()}')))
+        
+        if not image_files:
+            print(f"No image files found in {input_folder} with extensions {file_extensions}")
+            return None
+        
+        print(f"Found {len(image_files)} image files to process")
+        
+        results = []
+        
+        for img_path in tqdm(image_files, desc="Processing slides"):
+            try:
+                filename = os.path.basename(img_path)
+                area, mask, filled_tissue = calculate_tissue_area(img_path)
+      
+                img = cv2.imread(img_path)
+                base_name = os.path.splitext(filename)[0]
+                cv2.imwrite(f"{output_folder}/{base_name}_original.png", img)
+                
+                if mask is not None:
+                    cv2.imwrite(f"{output_folder}/{base_name}_mask.png", mask)
+                
+                results.append({
+                    'Image': filename,
+                    'Tissue Area (pixels)': area
+                })
+                
+            except Exception as e:
+                print(f"Error processing {img_path}: {e}")
+        
+        if results:
+            df = pd.DataFrame(results)
+            csv_path = os.path.join(output_folder, "tissue_areas.csv")
+            df.to_csv(csv_path, index=False)
+            print(f"Results saved to {csv_path}")
+            return df
+        else:
+            print("No results were generated")
+            return None   
+      ```
+      The final section of this script is the main execution block. It defines the folders to use, calls the processing function and checks whether results were produced by printing a confirmation or warning message accordingly.
+      ```python
+      if __name__ == "__main__":
+        input_folder = 'Input'
+        output_folder = 'Output'
+        
+        print(f"Processing slides from {input_folder}")
+        print(f"Results will be saved to {output_folder}")
+        
+        df = process_folder(input_folder, output_folder)
+        
+        if df is not None:
+            print("Processing complete!")
+            print(f"CSV file with area measurements saved to {output_folder}/tissue_areas.csv")
+        else:
+            print("No results were generated.")
+      ```
+      Now that you have calculated the area of each tissue section in pixels, you can proceed in performing your desired statistical analyses normalizing on tissue area. 
+
+### 4. **Infer Drug Distributions**
 Let's now explore a path illuminated by our newfound understanding of vascular network morphology, enhanced by the power of Gaussian Process (GP) Modelling, to uncover the biological relevance of vessel arrangement. As you know, any drug reaches it's target through vessels, but how exactly do vessel morphology and distribution impact the diffusion of compounds from the vessels into surrounding tissues? To answer, we must correlate the vascular network extracted from histological images with MALDI imaging data through GP modelling. Your aim is to model the spatial distribution of a drug within a tissue sample based on MALDI imaging, where pixel intensity is directly proportional to drug concentration. However, before applying GP modelling to real images, we must validate the model’s accuracy through simulations.
 
 > **Theoretical Background**: A **Gaussian Process** (GP) is a collection of random variables, where any finite subset follows a multivariate normal distribution. This statistical method offers a probabilistic framework for modelling spatial dependencies. It is widely used in spatial statistics and machine learning to infer continuous functions from discrete data points. In this context, GP modelling allows us to estimate the underlying drug distribution function based on observed MALDI intensities.
 
-   - #### 3.1 Generating synthetic vessel images**
-      To begin, execute the `Final_optimized_4_Windows.R` you may find in this repository. Note that this code only works on windows operating systems.
+   - #### 4.1 Generating synthetic vessel images
+      To begin, execute `Final_optimized_4_Windows.R` (script downloadable from the user slrenne's erivessel repository). Note that this code only works on windows operating systems.
 
       As usual, set up your environment. Notably, set a fixed seed for random number generation and import the `Statistical Rethinking` package (detailed intructions for installation may be found on [Richard McElreath's rethinking repository](https://github.com/rmcelreath/rethinking)). We also create a parallel cluster to speed things up.
       ```r
@@ -239,7 +405,7 @@ Let's now explore a path illuminated by our newfound understanding of vascular n
       mats <- parLapply(cl, 1:N_img, function(i) test_function(n, circles_list[[i]]))
       ```
       
-   - #### 3.2 Creating Simulated MALDI Images
+   - #### 4.2 Creating Simulated MALDI Images
       Next, we generate simulated MALDI intensity maps based on any predefined function you like, such as an exponential decay model:
       
       ```math
@@ -288,7 +454,7 @@ Let's now explore a path illuminated by our newfound understanding of vascular n
         rnorm(n*n, mean = sim_gp[[i]] + beta * as.vector(t(mats[[i]])), sd = 1)
       })
       ```
-   - #### 3.3 Inferring drug distribution with GP regression
+   - #### 4.3 Inferring drug distribution with GP regression
       Now that we have simulated data, we fit a Gaussian Process model using **Bayesian inference** with **Stan (rethinking package)**.
 
       First, prepare data for the Bayesian model.
@@ -339,7 +505,7 @@ Let's now explore a path illuminated by our newfound understanding of vascular n
       post <- extract.samples(GP_N)
       ```
    
-   - #### 3.4 **Validating the Model**
+   - #### 4.4 **Validating the Model**
       We visualize the inferred vs. true covariance functions by plotting the priors, the actual kernel and the estimated kernels (your posterior samples). Also, remember to stop the cluster to free resources.
       ```r
       #r
@@ -369,7 +535,7 @@ Let's now explore a path illuminated by our newfound understanding of vascular n
       ```
       If the inferred decay function closely matches the predefined function, it means the GP model accurately recovers known distribution parameters. So, the model's acccuracy is validated and ready to be easily applied to real world histological and MALDI images!
       
-### 4. **Interpret Your Data**
+### 5. **Interpret Your Data**
 Finally, you have arrived at the last step. This is where the numbers should start to talk, where images should transform into knowledge, and where you should ask yourself, **“So what?”**, what do these findings mean for your future research? And just like that, you’ve made sense of it all, you've taken a raw histological image and extracted meaningful biological insights. So, go forth and analyze, because in the world of vessel analysis, the smallest capillary could hold the biggest discovery.
 
 ## Contributors 
