@@ -1,7 +1,6 @@
 +++
-date = '2025-03-12T14:57:30+01:00'
+date = '2025-05-20T11:22:30+01:00'
 title = 'Spatial Vessel Analysis'
-layout = 'single'
 +++
 
 # Spatial Vessel Analysis 
@@ -140,8 +139,11 @@ for folder in folders:
       plt.imsave(f"{directory_to_save}{folder}_Segmented.png", opening, cmap="gray")
       ```
       Example output: a binary image, created using a mask, where all vessels are represented in white and the background is shown in black.
-      <img src="/images/Segmented.png" alt="Image of segmented vessels" width="400">
-     
+
+      <p align="center">
+        <img src="/images/Segmented.png" alt="Image of segmented vessels" width="400">
+      </p>
+
       To enhance interpretability - because seeing is believing - contour detection outlines vessel boundaries as an overlay on the original images. Nothing beats a well-labeled, highlighted image that speaks for itself, showcasing exactly what you've extracted.
       ```python
       #python
@@ -153,7 +155,9 @@ for folder in folders:
        cv2.imwrite(f"{directory_to_save}{folder}_Vessels.jpg", original)
       ```
       Example output: the original histological image, with vessel countours highlighted in green.
-      <img src="/images/Contoured.jpg" alt="Image of contoured vessels" width="400">
+      <p align="center">
+        <img src="/images/Contoured.jpg" alt="Image of contoured vessels" width="400">
+      </p>
 
    - #### 2.4 Feature extraction
      Great, you now have segmented vessels, but science demands numbers, not just pretty pictures. To obtain more information on vessel morphology, quantitative features are extracted using `regionprops_table` from `skimage.measure`. These properties include:
@@ -268,8 +272,10 @@ Now that you have quantitative data on your vessels, you can perform statistics 
       ```python   
         return area_pixels, mask, filled_tissue
       ```
-      Example output: a binary image showing the background in white and the total tissue area in white.
-      <img src="/images/Area.png" alt="Binary image showing tissue as white and background as black" width="400">
+      Example output: a binary image showing the background in black and the total tissue area in white.
+      <p align="center">
+        <img src="/images/Area.png" alt="Binary image showing tissue as white and background as black" width="400">
+      </p>
 
       The next function, `process_folder`, processes all image files in a given folder and applies the `calculate_tissue_area` function to each of them. The results are saved to a CSV file.
       ```python
@@ -407,14 +413,15 @@ Let's now explore a path illuminated by our newfound understanding of vascular n
       
    - #### 4.2 Creating Simulated MALDI Images
       Next, we generate simulated MALDI intensity maps based on any predefined function you like, such as an exponential decay model:
-      
-      ```math
+
+      $$
       I(x) = \eta^2 e^{- \frac{d(x)^2}{2\rho^2}}
-      ```
+      $$
+
       where we manually define the parameters:
-      - $d(x)$, the Euclidean distance from vessels,  
-      - $\eta^2$, the signal variance,  
-      - $\rho$, the characteristic length scale controlling spatial correlation.
+        - $d(x)$: the Euclidean distance from vessels  
+        - $\eta^2$: the signal variance  
+        - $\rho$: the characteristic length scale controlling spatial correlation
 
       First, compute Euclidean distance matrices for each image in parallel.
       ```r
@@ -537,13 +544,3 @@ Let's now explore a path illuminated by our newfound understanding of vascular n
       
 ### 5. **Interpret Your Data**
 Finally, you have arrived at the last step. This is where the numbers should start to talk, where images should transform into knowledge, and where you should ask yourself, **“So what?”**, what do these findings mean for your future research? And just like that, you’ve made sense of it all, you've taken a raw histological image and extracted meaningful biological insights. So, go forth and analyze, because in the world of vessel analysis, the smallest capillary could hold the biggest discovery.
-
-## Contributors 
-G. Grion, K. Roufail, F. E. Colella, Dr. Ö. Mintemur, Dr. S. L. Renne.
-
-## Citation
-If you use this pipeline, please cite:
-> Renne et al., Integrating Spatial Vessel Analysis into Tumour Microenvironment Characterization, *Virchows Arch*, 485(Suppl 1), 2024.
-
-## Contact
-For inquiries, please reach out via [GitHub Issues](https://github.com/slrenne/erivessel/issues).

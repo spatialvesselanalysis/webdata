@@ -2,3 +2,24 @@ baseURL = 'https://spatialvesselanalysis.github.io/'
 languageCode = 'en-us'
 title = 'Spatial Vessel Analysis'
 theme = 'hugo-book'
+
+[params]
+  BookMenuBundle = '/projects/'
+  BookSection = '*'
+  BookToC = true
+  math = true
+  disableSearch = true
+  BookSearch = false
+
+[menu]
+
+  [[menu.main]]
+    identifier = "projects"
+    name = "projects"
+    url = "/projects/"
+    weight = 1
+
+[markup]
+  [markup.goldmark]
+    [markup.goldmark.renderer]
+      unsafe = true
