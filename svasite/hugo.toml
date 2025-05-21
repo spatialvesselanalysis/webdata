@@ -1,6 +1,6 @@
 baseURL = 'https://spatialvesselanalysis.github.io/'
 languageCode = 'en-us'
-title = 'Spatial Vessel Analysis'
+title = 'Home'
 theme = 'hugo-book'
 
 [params]
@@ -15,9 +15,16 @@ theme = 'hugo-book'
 
   [[menu.main]]
     identifier = "projects"
-    name = "projects"
+    name = "Step-by-Step Guide"
     url = "/projects/"
     weight = 1
+
+  [[menu.main]]
+  identifier = "about"
+  name = "About Us"
+  url = "/about/"
+  weight = 99
+  
 
 [markup]
   [markup.goldmark]
